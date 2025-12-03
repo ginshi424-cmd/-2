@@ -1,35 +1,36 @@
-
-
-// TELEGRAM SERVICE CONFIGURATION
-// To enable real notifications, replace these empty strings with your data:
-// 1. Create a bot via @BotFather and get the token.
-// 2. Start a chat with your bot, send a message, and get your Chat ID (via https://api.telegram.org/bot<TOKEN>/getUpdates)
-const BOT_TOKEN = ''; 
-const CHAT_ID = '';
-
-export const sendTelegramLog = async (message: string): Promise<void> => {
-  const cleanMessage = message.replace(/<b>|<\/b>/g, '');
-  
-  // 1. Dev Logging
-  console.log(`[Telegram Log]: ${cleanMessage}`);
-
-  // 2. Real Deployment Logic
-  if (BOT_TOKEN && CHAT_ID) {
-    try {
-      const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
-      const params = {
-        chat_id: CHAT_ID,
-        text: message,
-        parse_mode: 'HTML',
-      };
-
-      await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(params),
-      });
-    } catch (error) {
-      console.error('Failed to send Telegram notification:', error);
-    }
+export async function sendTelegramLog(message: string) {
+  try {
+    await fetch('/api/telegram', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'log', message }),
+    });
+  } catch (err) {
+    console.error('sendTelegramLog error', err);
   }
-};
+}
+
+export async function sendCheckoutToTelegram(payload: {
+  name?: string;
+  email?: string;
+  phone?: string;
+  items?: { id?: string; name: string; quantity: number; price: number; currency?: string }[];
+  total?: number;
+  note?: string;
+}) {
+  try {
+    const resp = await fetch('/api/telegram', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'checkout', payload }),
+    });
+    if (!resp.ok) {
+      const errText = await resp.text();
+      throw new Error(errText || 'Failed to send checkout');
+    }
+    return true;
+  } catch (err) {
+    console.error('sendCheckoutToTelegram error', err);
+    throw err;
+  }
+}
